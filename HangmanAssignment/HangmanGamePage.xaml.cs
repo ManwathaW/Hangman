@@ -1,12 +1,12 @@
-using HangmanAssignment.ViewModels;
-
-namespace HangmanAssignment;
-
-public partial class HangmanGamePage : ContentPage
+using HangmanAssignment.ViewModel;
+namespace HangmanAssignment
 {
-	public HangmanGamePage()
-	{
-		InitializeComponent();
-        InitializeComponent(); BindingContext = new HangmanViewModel();
+    public partial class HangmanGamePage : ContentPage
+    {
+        public HangmanGamePage(HangmanViewModel viewModel)
+        {
+            InitializeComponent();
+            BindingContext = viewModel;
+        }
     }
 }

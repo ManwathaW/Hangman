@@ -1,4 +1,6 @@
 ﻿using Microsoft.Extensions.Logging;
+using HangmanAssignment.ViewModel;
+using CommunityToolkit.Maui;
 
 namespace HangmanAssignment
 {
@@ -9,6 +11,7 @@ namespace HangmanAssignment
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+                .UseMauiCommunityToolkit()
                 .ConfigureFonts(fonts =>
                 {
                     fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
@@ -17,6 +20,9 @@ namespace HangmanAssignment
 
 #if DEBUG
     		builder.Logging.AddDebug();
+            builder.Services.AddTransient<HangmanGamePage>();
+            builder.Services.AddTransient<HangmanViewModel>();
+
 #endif
 
             return builder.Build();

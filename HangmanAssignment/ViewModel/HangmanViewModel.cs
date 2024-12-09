@@ -1,100 +1,122 @@
-﻿using System;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using System.Windows.Input;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
-using HangmanAssignment.Models;
 
-namespace HangmanAssignment.ViewModels
+namespace HangmanAssignment.ViewModel
 {
-    public class HangmanViewModel : INotifyPropertyChanged
+    // ViewModel class for the Hangman game, inheriting from ObservableObject for property change notifications
+    public partial class HangmanViewModel : ObservableObject
     {
-        private HangmanGame _game;
-        private string _userGuess;
-        private string _hangmanImage;
+        // List of possible words for the hangman game
+        private readonly string[] words = {
+            "CURRENT", "GUESS", "HANGMAN", "MAUI", "CODE",
+            "BANANA", "PICKLE", "WHIMSICAL", "FLABBERGAST",
+            "NINCOMPOOP", "GIGGLE", "BUMFUZZLE", "SHENANIGANS",
+            "BAZOOKIE", "GOBBLEDYGOOK", "SNICKERDOODLE",
+            "LOLLIPOP", "WIGGLEWORM", "FROLIC",
+            "DINGLEBERRY", "QUIRKY", "JELLYBEAN",
+            "BUMPKIN", "WIGGLE", "HOOPLA"
+        };
 
+        private string currentWord; // The word currently being guessed
+        private int wrongGuesses; // Counter for wrong guesses
+        private HashSet<char> guessedLetters; // Set of letters that have been guessed
+
+        // Observable property for the word displayed to the user, with guessed letters revealed
+        [ObservableProperty]
+        private string displayWord;
+
+        // Observable property for the current letter guess input by the user
+        [ObservableProperty]
+        private string currentGuess;
+
+        // Observable property for the source of the hangman image to display
+        [ObservableProperty]
+        private string imageSource;
+
+        // Constructor to initialize the game
         public HangmanViewModel()
         {
-            _game = new HangmanGame { WordToGuess = "CARRENCEGUES" }; // Example word
-            GuessCommand = new Command(GuessLetter); // Set the GuessCommand to call GuessLetter
-            UpdateHangmanImage();
+            InitializeGame();
         }
 
-        public string DisplayWord => _game.DisplayWord;
-        public string IncorrectGuesses => string.Join(", ", _game.IncorrectGuesses);
-        public string Message => _game.IsGameOver ? (_game.IsWordGuessed ? "You win!" : "Game over!") : "Guess a letter";
-
-        // Property to bind to the user's guess input
-        public string UserGuess
+        // Method to initialize or reset the game state
+        private void InitializeGame()
         {
-            get => _userGuess;
-            set
+            Random random = new Random();
+            currentWord = words[random.Next(words.Length)]; // Randomly select a word from the list
+            wrongGuesses = 1; 
+            guessedLetters = new HashSet<char>();
+            ImageSource = "hang1.png"; 
+            RevealRandomLetters(2); 
+            UpdateDisplayWord(); 
+        }
+
+        // Method to reveal a specified number of random letters from the current word
+        private void RevealRandomLetters(int numberOfLetters)
+        {
+            Random random = new Random();
+            var letters = currentWord.ToCharArray().OrderBy(x => random.Next()).Take(numberOfLetters);
+            foreach (var letter in letters)
             {
-                _userGuess = value;
-                OnPropertyChanged();
+                guessedLetters.Add(letter); // Add each randomly selected letter to the set of guessed letters
             }
         }
 
-        // Property to bind to the hangman image
-        public string HangmanImage
+        // Method to update the display word based on guessed letters
+        private void UpdateDisplayWord()
         {
-            get => _hangmanImage;
-            set
+            DisplayWord = string.Join("  ", currentWord.Select(c =>
+                guessedLetters.Contains(c) ? c.ToString() : "__"));
+        }
+
+        // Command method for when the user makes a guess
+        [ICommand]
+        private void Guess()
+        {
+            if (string.IsNullOrEmpty(CurrentGuess))
+                return; 
+
+            char guess = CurrentGuess.ToUpper()[0]; 
+            CurrentGuess = string.Empty; 
+
+            if (guessedLetters.Contains(guess))
+                return; 
+
+            guessedLetters.Add(guess);
+
+            if (!currentWord.Contains(guess))
             {
-                _hangmanImage = value;
-                OnPropertyChanged();
+                wrongGuesses++;
+                ImageSource = $"hang{wrongGuesses}.png"; 
+
+                if (wrongGuesses >= 2)
+                {                  
+                    Application.Current.MainPage.DisplayAlert("Game Over",
+                        $"The word was: {currentWord}", "New Game").ContinueWith(_ => InitializeGame());
+                    return;
+                }
+            }
+
+            UpdateDisplayWord(); // Update the display word with the guessed letters
+
+            if (!DisplayWord.Contains("_"))
+            {
+                
+                Application.Current.MainPage.DisplayAlert("Congratulations",
+                    "You won!", "New Game").ContinueWith(_ => InitializeGame());
             }
         }
 
-        // Command for the Guess button
-        public ICommand GuessCommand { get; }
-
-        // Method called when the Guess button is clicked
-        private void GuessLetter()
+        // Command method to start a new game
+        [ICommand]
+        private void NewGame()
         {
-            if (string.IsNullOrEmpty(UserGuess) || UserGuess.Length != 1)
-                return;
-
-            char letter = UserGuess.ToUpper()[0];
-            if (_game.CorrectGuesses.Contains(letter) || _game.IncorrectGuesses.Contains(letter))
-                return;
-
-            if (_game.WordToGuess.Contains(letter))
-                _game.CorrectGuesses.Add(letter);
-            else
-                _game.IncorrectGuesses.Add(letter);
-
-            UserGuess = string.Empty;
-            UpdateHangmanImage();
-            OnPropertyChanged(nameof(DisplayWord));
-            OnPropertyChanged(nameof(IncorrectGuesses));
-            OnPropertyChanged(nameof(Message));
-        }
-
-        // Method to update the hangman image based on the current attempt count
-        private void UpdateHangmanImage()
-        {
-            switch (_game.CurrentAttempt)
-            {
-                case 1: HangmanImage = "hang1.png"; break;
-                case 2: HangmanImage = "hang2.png"; break;
-                case 3: HangmanImage = "hang3.png"; break;
-                case 4: HangmanImage = "hang4.png"; break;
-                case 5: HangmanImage = "hang5.png"; break;
-                case 6: HangmanImage = "hang6.png"; break;
-                case 7: HangmanImage = "hang7.png"; break;
-                case 8: HangmanImage = "hang8.png"; break;
-                default: HangmanImage = "hang1.png"; break;
-            }
-            OnPropertyChanged(nameof(HangmanImage));
-        }
-
-        // Implementation of INotifyPropertyChanged
-        public event PropertyChangedEventHandler PropertyChanged;
-
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            InitializeGame(); 
         }
     }
 }
